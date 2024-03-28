@@ -1,0 +1,2 @@
+# opexbot-lite
+investcontest
