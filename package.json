@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "tinkoff-sdk-grpc-js": "^1.19.1"
+  },
+  "name": "opexbot-lite",
+  "description": "investcontest",
+  "version": "1.0.0",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pskucherov/opexbot-lite.git"
+  },
+  "author": "Pavel Kucherov",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/pskucherov/opexbot-lite/issues"
+  },
+  "homepage": "https://github.com/pskucherov/opexbot-lite#readme"
+}
