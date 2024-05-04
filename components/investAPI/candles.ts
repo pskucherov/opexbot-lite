@@ -104,7 +104,7 @@ export class Candles extends Common {
                 to,
             });
 
-            await Time.delay(200);
+            await Time.delay(100);
 
             if (candles.length > 0) {
                 this.cache.set(cacheKey, candles);
