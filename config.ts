@@ -30,16 +30,14 @@ const sdk = createSdk(
             str += '\r\n';
         }
 
-        fs.appendFile('sdkLogs.txt', str, (err) => {
+        fs.appendFile('sdkLogs.txt', str, err => {
             if (err) throw err;
         });
 
-        console.log(str);
-
         return str;
     }, {
-    isSandbox: true,
-});
+        isSandbox: true,
+    });
 
 const SANDBOXSDK = sdk;
 
