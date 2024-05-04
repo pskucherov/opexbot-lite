@@ -8,12 +8,6 @@ import { Log } from '../../components/log';
 import { MoneyValue, Quotation } from 'tinkoff-sdk-grpc-js/dist/generated/common';
 import { HistoricCandle } from 'tinkoff-sdk-grpc-js/dist/generated/marketdata';
 
-interface ISettings {
-    PERIOD_RSI: number;
-    PERIOD_MA: number;
-    PRICE_PERCENT_DIFF: number;
-}
-
 export class Robot {
     tradeSystem: Backtest;
     logSystem?: Log;
@@ -35,14 +29,10 @@ export class Robot {
     countBuy: number = 0;
     countSell: number = 0;
 
-    constructor(tradeSystem: Backtest, settings: ISettings, logSystem?: Log) {
+    constructor(tradeSystem: Backtest, logSystem?: Log) {
         this.tradeSystem = tradeSystem;
         this.logSystem = logSystem;
         this.logSystem?.refresh();
-
-        this.PERIOD_RSI = settings.PERIOD_RSI || 30;
-        this.PERIOD_MA = settings.PERIOD_MA || 200;
-        this.PRICE_DIFF = settings.PRICE_PERCENT_DIFF || 2;
     }
 
     async initStep(currentCandle: HistoricCandle) {
@@ -62,16 +52,16 @@ export class Robot {
     }
 
     makeStep() {
-        if (this.needCloseBuy() || this.needCloseSell()) {
+        if (this.needBuy()) {
+            this.makeBuy();
+        } else if (this.needSell()) {
+            this.makeSell();
+        } else if (this.needCloseBuy() || this.needCloseSell()) {
             let lots = 0;
 
             this.tradeSystem.getOpenedPositions().forEach(position => lots += position.lots);
             this.tradeSystem.backtestClosePosition(this.currentPriceMoneyValue);
             this.consolePositionMessage(this.tradeSystem.getLastPosition());
-        } else if (this.needBuy()) {
-            this.makeBuy();
-        } else if (this.needSell()) {
-            this.makeSell();
         }
     }
 
@@ -153,33 +143,15 @@ export class Robot {
         const hasLowRSI = this.RSI < 30;
         const price = Common.getPrice(this.tradeSystem.getLastOpenedPosition()?.price) || 0;
 
-        // if (hasPriceDiff && hasLowRSI && typeof price !== 'undefined' &&
-        //     !hasOpenedPosition) {
-        //     console.log(hasPriceDiff, hasLowRSI, typeof price !== 'undefined', !hasOpenedPosition);
-        //     console.log(this.hasTimeDiff(30));
-        //     console.log(this.calcPercentDiff(
-        //         this.currentPrice,
-        //         price,
-        //     ), -this.PRICE_DIFF, this.calcPercentDiff(
-        //         this.currentPrice,
-        //         price,
-        //     ) < -this.PRICE_DIFF);
-
-        //     console.log();
-        // }
-
         return hasPriceDiff && hasLowRSI && typeof price !== 'undefined' && (
-            !hasOpenedPosition
-            // &&
-            // (
-            //     this.hasTimeDiff(30)
-
-            //     &&
-            //     this.calcPercentDiff(
-            //         this.currentPrice,
-            //         price,
-            //     ) < -this.PRICE_DIFF
-            // )
+            !hasOpenedPosition ||
+            (
+                this.hasTimeDiff(30) &&
+                this.calcPercentDiff(
+                    this.currentPrice,
+                    price,
+                ) < -this.PRICE_DIFF
+            )
         );
     }
 
@@ -190,15 +162,14 @@ export class Robot {
         const price = Common.getPrice(this.tradeSystem.getLastOpenedPosition()?.price) || 0;
 
         return hasPriceDiff && hasHighRSI && typeof price !== 'undefined' && (
-            !hasOpenedPosition
-            //  &&
-            // (
-            //     this.hasTimeDiff(30) &&
-            //     this.calcPercentDiff(
-            //         this.currentPrice,
-            //         price,
-            //     ) > this.PRICE_DIFF
-            // )
+            !hasOpenedPosition ||
+            (
+                this.hasTimeDiff(30) &&
+                this.calcPercentDiff(
+                    this.currentPrice,
+                    price,
+                ) > this.PRICE_DIFF
+            )
         );
     }
 
@@ -243,11 +214,7 @@ export class Robot {
         return (partial * 100) / total - 100;
     }
 
-    getResult() {
-        return this.printResult(false);
-    }
-
-    printResult(appendLog = true) {
+    printResult() {
         let result = 0;
 
         this.tradeSystem.getBacktestPositions()?.forEach(position => {
@@ -266,31 +233,25 @@ export class Robot {
 
         const resultStr = result.toFixed(2);
 
-        if (appendLog) {
-            this.logSystem?.append(resultStr);
-        }
+        this.logSystem?.append(resultStr);
 
         return resultStr;
     }
 
     consolePositionMessage(position: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-        if (Number(process.env.DEBUG) === 2) {
-            const positionType = position.direction === 1 ? 'Покупка' : 'Продажа';
-            const date = this.currentCandle?.time;
-            const rsiStr = this.RSI ? `RSI: ${this.RSI}` : '';
-            const priceToCloseStr = this.priceToClosePosition ? `Цена закрытия: ${this.priceToClosePosition}` : '';
+        const positionType = position.direction === 1 ? 'Покупка' : 'Продажа';
+        const date = this.currentCandle?.time;
+        const rsiStr = this.RSI ? `RSI: ${this.RSI}` : '';
+        const priceToCloseStr = this.priceToClosePosition ? `Цена закрытия: ${this.priceToClosePosition}` : '';
 
-            this.logSystem?.appendArray([
-                positionType,
-                `Цена: ${Common.getPrice(position.price)}`,
-                `Дата: ${date}`,
-                `Result: ${this.getResult()}`,
-                rsiStr,
-                priceToCloseStr,
-                JSON.stringify(this.tradeSystem.getOpenedPositions(), null, 4),
-                ' ',
-            ]);
-        }
+        this.logSystem?.appendArray([
+            positionType,
+            `Цена: ${Common.getPrice(position.price)}`,
+            `Дата: ${date}`,
+            rsiStr,
+            priceToCloseStr,
+            ' ',
+        ]);
     }
 
     calcLots(price: number, moneyLimit: number) {
