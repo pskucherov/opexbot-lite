@@ -3,8 +3,6 @@ import { SANDBOXSDK as sdk } from '../../config';
 
 import { Backtest } from '../Common/Backtest';
 import { Instruments } from '../../components/investAPI/instruments';
-import { Robot } from './robot';
-import { Log } from '../../components/log';
 import { debugEnd, debugStart, isDebugEnable } from '../../components/utils';
 
 // @ts-ignore
