@@ -7,7 +7,7 @@
     "dev": "cross-env NODE_ENV=production ts-node src/main",
     "backtest": "cross-env DEBUG=1 ts-node ./bots/backtester/backtester.ts",
     "build": "cross-env NODE_ENV=production tsc",
-    "debugScreener": "cross-env DEBUG=1 ts-node src/screener.ts",
+    "screenerDebug": "cross-env DEBUG=1 ts-node src/screener.ts",
     "screener": "cross-env ts-node src/screener.ts",
     "lint": "npx eslint --fix ."
   },

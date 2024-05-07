@@ -363,7 +363,7 @@ export class Common {
                 'orderbook',
                 'candle',
             ].forEach(name => {
-                if (subscribes[name]) {
+                if (subscribes?.[name]) {
                     setImmediate(async () => {
                         const subscribeArr = subscribes[name]();
 
@@ -416,7 +416,7 @@ export class Common {
             });
 
             ['orders', 'positions'].forEach(name => {
-                if (subscribes[name]) {
+                if (subscribes?.[name]) {
                     setImmediate(async () => {
                         try {
                             let gen = subscribes[name]({
@@ -435,9 +435,6 @@ export class Common {
                                 } else if (data.position && this.isPortfolio) {
                                     [
                                         'securities',
-
-                                        // 'futures',
-                                        // 'options',
                                     ].forEach(name => {
                                         try {
                                             if (!data.position[name] || !data.position[name].length) {
@@ -927,15 +924,11 @@ export class Common {
         throw new Error('Method not implemented.');
     }
 
-    async getOperations() {
-        return this.accountId && this.instrumentId && this.cb.getOperations &&
-            await this.cb.getOperations(this.accountId,
-                this.isPortfolio ? undefined : this.instrumentId, 1, this.date);
-    }
-
     async getPortfolio() {
-        return this.accountId && this.cb.getPortfolio &&
-            (await this.cb.getPortfolio(this.accountId)); // , this.isPortfolio ? undefined : this.instrumentId));
+        return this.accountId &&
+            (await this.sdk?.operations.getPortfolio({
+                accountId: this.accountId,
+            })); // , this.isPortfolio ? undefined : this.instrumentId));
     }
 
     async getCurrentPositions() {

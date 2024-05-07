@@ -24,6 +24,9 @@ type IResult = {
     currentMonthRsiMonth: number;
     currentMonthRsiWeek: number;
     currentMonthRsiDay: number;
+    orderBookRatio?: {
+        bidAsk: number;
+    };
 };
 
 const results: IResult[] = [];
@@ -174,6 +177,7 @@ export default class Screener {
                         currentMonthRsiDay,
                         uid: instrumentUID,
                         ticker: instrument.ticker,
+                        orderBookRatio: await this.getOrderBookVolumeRatio(instrumentUID),
                     };
                 }
             } catch (e) {
@@ -189,47 +193,37 @@ export default class Screener {
     }
 
     /**
-     * Рассчитывает процентное отношение объёмов покупки, к объёмам продажи в стакане для списка инструментов.
-     * Возвращает среднее для всех заданных инструментов и по каждому отдельно.
+     * Рассчитывает процентное отношение объёмов покупки, к объёмам продажи в стакане для инструмента.
      *
-     * @param uids
+     * @param uid
      * @returns
      */
-    async getOrderBookVolumeRatio(uids: string[]) {
-        const result = [];
+    async getOrderBookVolumeRatio(uid: string) {
+        try {
+            const { bids, asks } = (await sdk.marketData.getOrderBook({
+                depth: 50,
+                instrumentId: uid,
+            })) || {};
 
-        for (let i = 0; i < uids.length; i++) {
-            try {
-                const uid = uids[i];
-                const { bids, asks } = (await sdk.marketData.getOrderBook({
-                    depth: 50,
-                    instrumentId: uid,
-                })) || {};
+            let bidsQuantity = 0;
 
-                let bidsQuantity = 0;
-
-                for (let j = 0; j < bids?.length; j++) {
-                    bidsQuantity += bids[j].quantity;
-                }
-
-                let asksQuantity = 0;
-
-                for (let j = 0; j < asks?.length; j++) {
-                    asksQuantity += asks[j].quantity;
-                }
-
-                result.push({
-                    uid,
-                    bidAsk: (bidsQuantity - asksQuantity) / bidsQuantity,
-                });
-            } catch (e) {
-                console.log(e); // eslint-disable-line
+            for (let j = 0; j < bids?.length; j++) {
+                bidsQuantity += bids[j].quantity;
             }
+
+            let asksQuantity = 0;
+
+            for (let j = 0; j < asks?.length; j++) {
+                asksQuantity += asks[j].quantity;
+            }
+
+            return {
+                bidAsk: (bidsQuantity - asksQuantity) / bidsQuantity,
+            };
+        } catch (e) {
+            console.log(e); // eslint-disable-line
         }
 
-        return {
-            market: result.reduce((acc, val) => acc + val.bidAsk, 0) / result.length,
-            result,
-        };
+        return undefined;
     }
 }
