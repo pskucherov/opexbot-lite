@@ -29,13 +29,12 @@ type IResult = {
     };
 };
 
-const results: IResult[] = [];
-
 export default class Screener {
     maxLotPrice: number;
     rsiMonth: number;
     rsiWeek: number;
     rsiDay: number;
+    results: IResult[] = [];
 
     constructor(props: {
         maxLotPrice?: number;
@@ -70,7 +69,7 @@ export default class Screener {
             const data = (await this.getRsiData(uid));
 
             if (typeof data !== 'undefined') {
-                results.push(data);
+                this.results.push(data);
             }
 
             debugEnd(`${i + '/' + uids.length} Запуск getRsiData ${instrumentsForTrade[uid].ticker}`);
@@ -78,7 +77,7 @@ export default class Screener {
             ++i;
         }
 
-        const instrumentsResult = results
+        const instrumentsResult = this.results
             .filter(r => Boolean(r))
             .sort((a, b) => {
                 return b.currentMonthRsiMonth - a.currentMonthRsiMonth;
@@ -217,9 +216,11 @@ export default class Screener {
                 asksQuantity += asks[j].quantity;
             }
 
-            return {
-                bidAsk: (bidsQuantity - asksQuantity) / bidsQuantity,
-            };
+            if (bidsQuantity && asksQuantity) {
+                return {
+                    bidAsk: (bidsQuantity - asksQuantity) / bidsQuantity,
+                };
+            }
         } catch (e) {
             console.log(e); // eslint-disable-line
         }

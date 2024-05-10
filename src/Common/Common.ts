@@ -111,6 +111,8 @@ export class Common {
         this.enums = options.enums;
         this.sdk = sdk;
 
+        this.logOrdersFile = path.resolve(__dirname, 'orders.log');
+
         // Методы, с помощью которых робот может общаться с внешним миром.
         this.cb = callbacks;
 
@@ -1314,7 +1316,7 @@ export class Common {
 
     async getOpenOrders() {
         try {
-            const { orders } = this.cb.getOrders && (await this.cb.getOrders(this.accountId)) || {};
+            const { orders } = (await this.sdk.orders.getOrders({ accountId: this.accountId })) || {};
 
             this.allOrders = orders;
 

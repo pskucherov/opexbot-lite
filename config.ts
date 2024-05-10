@@ -41,7 +41,6 @@ const SANDBOXSDK = sdk;
 const ORDERBOOK_TRESHHOLD = 2;
 
 const SCREENER_PARAMS = {
-    maxLotPrice: 4500,
     rsiMonth: 70,
     rsiWeek: 60,
     rsiDay: 60,

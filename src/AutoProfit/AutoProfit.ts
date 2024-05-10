@@ -1,12 +1,7 @@
-import {
-    StopOrderStatusOption,
-    StopOrderDirection,
-    StopOrderExpirationType,
-    StopOrderType,
-} from 'tinkoff-sdk-grpc-js/dist/generated/stoporders';
 import { Common } from '../Common/Common';
 import { Quotation } from 'tinkoff-sdk-grpc-js/dist/generated/common';
 import { Share } from 'tinkoff-sdk-grpc-js/dist/generated/instruments';
+import { OrderDirection, OrderType } from 'tinkoff-sdk-grpc-js/dist/generated/orders';
 
 const path = require('path');
 const name = __dirname.split(path.sep).pop();
@@ -50,8 +45,6 @@ export default class AutoProfit extends Common {
             return;
         }
 
-        console.log('sdk', accountId);
-
         try {
             await this.syncPos();
 
@@ -61,19 +54,9 @@ export default class AutoProfit extends Common {
                 p?.quantity?.units && p?.quantity?.units === p?.balance && !p?.blocked,
             );
 
-            console.log(this.currentPortfolio);
-            console.log(this.currentPositions);
-
-            console.log(JSON.stringify(this.currentPortfolio, null, 4));
-            console.log(JSON.stringify(this.currentPositions, null, 4));
-
-            console.log('isSync', isSync);
-
             if (!isSync) {
                 return;
             }
-
-            console.log('isSync');
 
             const { positions } = this.currentPortfolio || {};
 
@@ -81,16 +64,7 @@ export default class AutoProfit extends Common {
                 return;
             }
 
-            console.log('positions', positions);
-
-            const { stopOrders } = await sdk.stopOrders.getStopOrders({
-                accountId,
-                status: StopOrderStatusOption.STOP_ORDER_STATUS_ACTIVE,
-            });
-
             await this.updateOrders();
-
-            console.log('positions', positions);
 
             for (let j = 0; j < positions.length; j++) {
                 const {
@@ -104,15 +78,18 @@ export default class AutoProfit extends Common {
                 const isShort = (this.getPrice(quantity) || 0) < 0;
 
                 const instrumentInOrders = this.currentOrders.find(o => o.instrumentUid === instrumentUid);
+                const avgPrice = this.getPrice(averagePositionPrice) || 0;
 
                 if (
-                    // instrumentType !== 'share' ||
                     !averagePositionPrice ||
                     !this.allInstrumentsInfo?.[instrumentUid]?.lot ||
 
                     // Если по инструменту выставлена активная заявка, то стоп не ставим.
                     instrumentInOrders
                 ) {
+                    if (instrumentInOrders) {
+                        console.log('instrumentInOrders', instrumentInOrders, this.currentOrders); // eslint-disable-line no-console
+                    }
                     continue;
                 }
 
@@ -129,10 +106,6 @@ export default class AutoProfit extends Common {
                     continue;
                 }
 
-                const currentStopOrder = stopOrders.find(s => s.instrumentUid === instrumentUid);
-                const stopOrdersLotsDiff = currentStopOrder?.lotsRequested !==
-                    (Common.getPrice(quantity) || 1) / this.allInstrumentsInfo[instrumentUid].lot;
-
                 const min = this.allInstrumentsInfo[instrumentUid].minPriceIncrement;
 
                 if (!min) {
@@ -142,12 +115,22 @@ export default class AutoProfit extends Common {
                 const {
                     breakeven,
                 } = isShort ?
-                        this.getStopProfitForShort(averagePositionPriceVal) :
-                        this.getStopProfitForLong(averagePositionPriceVal);
+                    this.getStopProfitForShort(averagePositionPriceVal) :
+                    this.getStopProfitForLong(averagePositionPriceVal);
 
                 const realStop = this.getRealStop(isShort, breakeven, min);
-
                 const curPrice = Common.getPrice(currentPrice) || 0;
+
+                console.log(); // eslint-disable-line no-console
+                console.log('TICKER:', this.allInstrumentsInfo[instrumentUid]?.ticker); // eslint-disable-line no-console
+                console.log(positions[j]); // eslint-disable-line no-console
+                console.log('avgPrice', // eslint-disable-line no-console
+                    avgPrice,
+                    'realStop', realStop,
+                    'curPrice', curPrice,
+                    'curPriceDelta', curPrice * 0.9995,
+                    'PROFIT:', ((curPrice - avgPrice) / avgPrice).toFixed(5), '%',
+                );
 
                 if (realStop &&
                     (
@@ -174,44 +157,16 @@ export default class AutoProfit extends Common {
                             this.allInstrumentsInfo[instrumentUid].lot,
                         ),
                         price: curStopOrderPrice,
-                        stopPrice:
-                            isShort ?
-                                Common.subMinPriceIncrement(curStopOrderPrice, min) :
-                                Common.addMinPriceIncrement(curStopOrderPrice, min),
                         direction: isShort ?
-                            StopOrderDirection.STOP_ORDER_DIRECTION_BUY :
-                            StopOrderDirection.STOP_ORDER_DIRECTION_SELL,
-                        expirationType: StopOrderExpirationType.STOP_ORDER_EXPIRATION_TYPE_GOOD_TILL_CANCEL,
-                        stopOrderType: StopOrderType.STOP_ORDER_TYPE_STOP_LIMIT,
+                            OrderDirection.ORDER_DIRECTION_BUY :
+                            OrderDirection.ORDER_DIRECTION_SELL,
                         instrumentId: instrumentUid,
+                        orderType: OrderType.ORDER_TYPE_LIMIT,
                         accountId,
                     };
 
-                    const existOrderStopPrice = Common.getPrice(currentStopOrder?.price) || 0;
-                    const curStopOrderPriceNum = Common.getPrice(curStopOrderPrice) || 0;
-
-                    if (
-                        !currentStopOrder ||
-                        stopOrdersLotsDiff ||
-                        (
-                            isShort && (existOrderStopPrice > curStopOrderPriceNum) ||
-                            !isShort && (existOrderStopPrice < curStopOrderPriceNum)
-                        )
-                    ) {
-                        if (currentStopOrder?.stopOrderId) {
-                            console.log('Закрываем заявку', existOrderStopPrice); // eslint-disable-line no-console
-                            const { stopOrderId } = currentStopOrder;
-
-                            await this.closeStopOrder(accountId, stopOrderId);
-                        }
-
-                        console.log('Открываем заявку', curStopOrderPriceNum); // eslint-disable-line no-console
-                        await sdk.stopOrders.postStopOrder(data);
-                    }
-                } else if (currentStopOrder?.stopOrderId) {
-                    const { stopOrderId } = currentStopOrder;
-
-                    await this.closeStopOrder(accountId, stopOrderId);
+                    console.log('close position', data); // eslint-disable-line no-console
+                    await sdk.orders.postOrder(data);
                 }
             }
         } catch (e) {
@@ -231,8 +186,8 @@ export default class AutoProfit extends Common {
             step3,
             step4,
         } = isShort ?
-                this.getStopProfitForShort(averagePositionPriceVal) :
-                this.getStopProfitForLong(averagePositionPriceVal);
+            this.getStopProfitForShort(averagePositionPriceVal) :
+            this.getStopProfitForLong(averagePositionPriceVal);
 
         if (isShort) {
             return curPrice < step4 ?

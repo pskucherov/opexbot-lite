@@ -1,12 +1,11 @@
 /* eslint-disable no-console */
-// import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 
 import {
     lastPriceSubscribe, orderBookSubscribe,
 } from '../components/investAPI/subscribeTemplates';
 
 import {
-    ORDERBOOK_TRESHHOLD,
     SANDBOXACCID,
     SANDBOXSDK,
     SCREENER_PARAMS,
@@ -15,11 +14,15 @@ import {
 import AutoProfit from './AutoProfit/AutoProfit';
 
 import Screener from './Screener/Screener';
+import { OrderExecutionReportStatus } from 'tinkoff-sdk-grpc-js/dist/generated/orders';
 
-(async () => {
-    const screener = new Screener(SCREENER_PARAMS);
+const tryOrder = async (maxLotPrice: number) => {
+    try {
+        const screener = new Screener({
+            ...SCREENER_PARAMS,
+            maxLotPrice,
+        });
 
-    if (ORDERBOOK_TRESHHOLD) {
         const data = await screener.getTopInstruments(5);
 
         const screenerResult = data?.sort((a, b) => {
@@ -30,30 +33,70 @@ import Screener from './Screener/Screener';
             return 0;
         });
 
+        console.log('SCREENER');
         console.log(
             screenerResult,
         );
 
-        // setTimeout(async () => {
-        // console.log('buy');
+        const { orders } = (await SANDBOXSDK.orders.getOrders({ accountId: SANDBOXACCID })) || {};
 
-        // const uid = screenerResult[0].uid;
+        const openedOrders = orders && orders.filter((o: { executionReportStatus: number; }) => [
+            OrderExecutionReportStatus.EXECUTION_REPORT_STATUS_NEW,
+            OrderExecutionReportStatus.EXECUTION_REPORT_STATUS_PARTIALLYFILL,
+        ].includes(o.executionReportStatus));
 
-        // const pOrder = await SANDBOXSDK.orders.postOrder({
-        //     quantity: 1,
-        //     direction: 1,
-        //     accountId: SANDBOXACCID,
-        //     orderType: SANDBOXSDK.OrderType.ORDER_TYPE_BESTPRICE,
-        //     orderId: uuidv4(),
-        //     instrumentId: uid,
-        // });
+        if (openedOrders?.length) {
+            return;
+        }
 
-        // console.log(pOrder);
+        const { securities, futures, options } = await SANDBOXSDK.operations.getPositions({
+            accountId: SANDBOXACCID,
+        }) || {};
 
-        // }, 5000);
+        if (!securities?.length && !futures?.length && !options?.length) {
+            const uid = screenerResult[0].uid;
 
-        console.log('start');
+            const pOrder = await SANDBOXSDK.orders.postOrder({
+                quantity: 1,
+                direction: 1,
+                accountId: SANDBOXACCID,
+                orderType: SANDBOXSDK.OrderType.ORDER_TYPE_BESTPRICE,
+                orderId: uuidv4(),
+                instrumentId: uid,
+            });
+
+            console.log('pOrder', pOrder); // eslint-disable-line no-console
+        }
+    } catch (e) {
+        console.log(e); // eslint-disable-line
     }
+};
+
+const buyer = async () => {
+    try {
+        const { money } = await SANDBOXSDK.sandbox.getSandboxWithdrawLimits({
+            accountId: SANDBOXACCID,
+        }) || {};
+
+        const maxLotPrice = (AutoProfit.getPrice(money[0]) || 0) / 2;
+
+        console.log(new Date().toLocaleTimeString(), 'maxLotPrice', maxLotPrice); // eslint-disable-line no-console
+
+        if (maxLotPrice > 100) {
+            await tryOrder(maxLotPrice);
+        }
+
+        setTimeout(() => {
+            buyer();
+        }, 60000);
+    } catch (e) {
+        console.log(e); // eslint-disable-line
+    }
+};
+
+(async () => {
+    await buyer();
+
     const bot = new AutoProfit(SANDBOXACCID, false, false, {
         subscribes: {
             lastPrice: lastPriceSubscribe.bind(null, SANDBOXSDK),
@@ -65,3 +108,5 @@ import Screener from './Screener/Screener';
 
     bot.start();
 })();
+
+setInterval(() => { }, 60000);
