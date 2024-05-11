@@ -38,7 +38,11 @@ npm i
 
 ## Контакты
 [Торговый помощник](https://opexflow.com/kit)
+
 [YouTube](https://www.youtube.com/channel/UCfAEA159a0QMBcswJ23S2rA)
+
 [Телеграм](https://t.me/opexflow)
+
 [Пульс](https://www.tinkoff.ru/invest/social/profile/Opexflow/)
+
 [Техподдержка](https://t.me/opexbotru)
