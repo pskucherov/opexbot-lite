@@ -1,6 +1,8 @@
 import { createSdk } from 'tinkoff-sdk-grpc-js';
 import { MarketDataRequest, SubscriptionAction, SubscriptionInterval } from 'tinkoff-sdk-grpc-js/dist/generated/marketdata';
 
+// Подписки на стримы событий
+
 function createSubscriptionCandleRequest(instrumentId: string | string[]): MarketDataRequest {
     return MarketDataRequest.fromPartial({
         subscribeCandlesRequest: {

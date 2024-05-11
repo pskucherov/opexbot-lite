@@ -1,9 +1,15 @@
 import { InstrumentIdType, InstrumentStatus, Share } from 'tinkoff-sdk-grpc-js/dist/generated/instruments';
-import { Common } from './common';
-import { Common as UtilsCommon } from '../../src/Common/Common';
+import { Common } from '../../src/Common/Common';
+import { createSdk } from 'tinkoff-sdk-grpc-js';
 
-export class Instruments extends Common {
+export class Instruments {
     cachedShares: { [x: string]: Share; } = {};
+
+    sdk: ReturnType<typeof createSdk>;
+
+    constructor(sdk: ReturnType<typeof createSdk>) {
+        this.sdk = sdk;
+    }
 
     async getAllShares() {
         try {
@@ -52,7 +58,7 @@ export class Instruments extends Common {
 
         // Фильтрует цены, с учётом лотности, которые нужно удалить.
         const filtredPricesToDel = !maxLotPrice ? [] : prices?.lastPrices?.filter(f => {
-            const currentPrice = UtilsCommon.getPrice(f.price) || 0;
+            const currentPrice = Common.getPrice(f.price) || 0;
             const lotPrice = currentPrice * shares[f.instrumentUid].lot;
 
             return lotPrice > maxLotPrice;

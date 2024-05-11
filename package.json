@@ -4,8 +4,7 @@
   "version": "1.0.0",
   "main": "./build/src/bot.js",
   "scripts": {
-    "dev": "cross-env NODE_ENV=production ts-node src/main",
-    "backtest": "cross-env DEBUG=1 ts-node ./bots/backtester/backtester.ts",
+    "bot": "npx ts-node src/bot",
     "build": "cross-env NODE_ENV=production tsc",
     "screenerDebug": "cross-env DEBUG=1 ts-node src/screener.ts",
     "screener": "cross-env ts-node src/screener.ts",

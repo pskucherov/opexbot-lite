@@ -15,6 +15,7 @@ export default class AutoProfit extends Common {
     allInstrumentsInfo: {
         [key: string]: Share
     } = {};
+
     breakeven: number = 0.0011;
     breakevenStep1: number = 0.002;
     breakevenStep2: number = 0.005;

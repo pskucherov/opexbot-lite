@@ -8,12 +8,12 @@ const fs = require('fs');
  * @param {*} param1
  * @returns
  */
-const mkDirByPathSync = (targetDir, { isRelativeToScript = false } = {}) => {
+export const mkDirByPathSync = (targetDir: string, { isRelativeToScript = false } = {}) => {
     const sep = path.sep;
     const initDir = path.isAbsolute(targetDir) ? sep : '';
     const baseDir = isRelativeToScript ? __dirname : '.';
 
-    return targetDir.split(sep).reduce((parentDir, childDir) => {
+    return targetDir.split(sep).reduce((parentDir: string, childDir: string) => {
         let curDir = baseDir;
 
         if (parentDir && childDir) {
@@ -26,7 +26,7 @@ const mkDirByPathSync = (targetDir, { isRelativeToScript = false } = {}) => {
             fs.mkdirSync(curDir, { recursive: true });
 
             return curDir;
-        } catch (err) {
+        } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             if (err.code === 'EEXIST') { // curDir already exists!
                 return curDir;
             }
@@ -47,14 +47,48 @@ const mkDirByPathSync = (targetDir, { isRelativeToScript = false } = {}) => {
     }, initDir);
 };
 
-const dateOptions = { year: 'numeric', month: 'numeric', day: 'numeric' };
+export const logger = (a: any, b: any, c: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    let str = '';
 
-const logger = (a, b, c) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-    return console.log(a || '', b || '', c || ''); // eslint-disable-line no-console
+    if (a) {
+        str += (typeof a === 'object' ? JSON.stringify(a, null, 4) : a) + '\r\n';
+    }
+    if (b) {
+        str += (typeof b === 'object' ? JSON.stringify(b, null, 4) : b) + '\r\n';
+    }
+    if (c) {
+        str += (typeof c === 'object' ? JSON.stringify(c, null, 4) : c) + '\r\n';
+    }
+
+    if (str) {
+        str += '\r\n';
+    }
+
+    fs.appendFile('sdkLogs.txt', str, (err: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        if (err) throw err;
+    });
+
+    return str;
 };
 
-module.exports = {
-    todayDate: new Date().toLocaleString('ru', dateOptions),
-    mkDirByPathSync,
-    logger,
+export const isDebugEnable = () => {
+    return Boolean(process.env.DEBUG);
+};
+
+export const debugStart = (name: string) => {
+    if (!process.env.DEBUG) {
+        return;
+    }
+
+    console.log(name, 'START'); // eslint-disable-line no-console
+    console.time(name); // eslint-disable-line no-console
+};
+
+export const debugEnd = (name: string) => {
+    if (!process.env.DEBUG) {
+        return;
+    }
+
+    console.timeEnd(name); // eslint-disable-line no-console
+    console.log(); // eslint-disable-line no-console
 };

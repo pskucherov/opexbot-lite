@@ -4,7 +4,7 @@ import { Instruments } from '../../components/investAPI/instruments';
 import {
     debugEnd, debugStart,
     isDebugEnable,
-} from '../../components/utils';
+} from '../utils';
 
 import { Share } from 'tinkoff-sdk-grpc-js/dist/generated/instruments';
 import {

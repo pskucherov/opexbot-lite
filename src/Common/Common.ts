@@ -1,3 +1,6 @@
+// Фреймворк для создания торговых роботов
+// @copypaste https://github.com/pskucherov/OpexBot/blob/main/src/Common/TsCommon.ts
+
 // @ts-nocheck
 /* eslint @typescript-eslint/no-explicit-any: 0 */
 /* eslint @typescript-eslint/no-unused-vars: 0 */
